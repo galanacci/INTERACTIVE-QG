@@ -11,6 +11,8 @@ let virtualCursor = { x: 0, y: 0 };
 
 function init() {
     console.log('Initializing scene...');
+    detectMobileAndGyroscope();
+    
     scene = new THREE.Scene();
     
     const aspectRatio = window.innerWidth / window.innerHeight;
@@ -37,13 +39,12 @@ function init() {
 
     loadModel();
 
-    detectMobileAndGyroscope();
-
     if (isMobile && gyroscopeAvailable) {
-        window.addEventListener('deviceorientation', handleOrientation, true);
+        createGyroscopeButton();
     } else {
         window.addEventListener('mousemove', onMouseMove, false);
     }
+
     window.addEventListener('resize', onWindowResize, false);
 
     animate();
@@ -57,33 +58,25 @@ function detectMobileAndGyroscope() {
     }
 }
 
-function createPermissionPopup() {
-    const popup = document.createElement('div');
-    popup.style.position = 'fixed';
-    popup.style.top = '50%';
-    popup.style.left = '50%';
-    popup.style.transform = 'translate(-50%, -50%)';
-    popup.style.background = 'white';
-    popup.style.padding = '20px';
-    popup.style.borderRadius = '10px';
-    popup.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
-    popup.style.zIndex = '1000';
-    popup.innerHTML = `
-        <h2>Enable Gyroscope</h2>
-        <p>This experience works best with gyroscope control. Would you like to enable it?</p>
-        <button id="enableGyro">Enable Gyroscope</button>
-        <button id="noGyro">No, thanks</button>
-    `;
-    document.body.appendChild(popup);
+function createGyroscopeButton() {
+    const button = document.createElement('button');
+    button.textContent = 'Enable Gyroscope';
+    button.style.position = 'fixed';
+    button.style.bottom = '20px';
+    button.style.left = '50%';
+    button.style.transform = 'translateX(-50%)';
+    button.style.padding = '10px 20px';
+    button.style.fontSize = '16px';
+    button.style.backgroundColor = '#4CAF50';
+    button.style.color = 'white';
+    button.style.border = 'none';
+    button.style.borderRadius = '5px';
+    button.style.cursor = 'pointer';
+    button.style.zIndex = '1000';
 
-    document.getElementById('enableGyro').addEventListener('click', () => {
-        requestGyroscopePermission();
-        document.body.removeChild(popup);
-    });
+    button.addEventListener('click', requestGyroscopePermission);
 
-    document.getElementById('noGyro').addEventListener('click', () => {
-        document.body.removeChild(popup);
-    });
+    document.body.appendChild(button);
 }
 
 function requestGyroscopePermission() {
@@ -91,16 +84,26 @@ function requestGyroscopePermission() {
         DeviceOrientationEvent.requestPermission()
             .then(permissionState => {
                 if (permissionState === 'granted') {
-                    window.addEventListener('deviceorientation', handleOrientation, true);
+                    enableGyroscope();
                 } else {
                     console.log('Gyroscope permission denied');
                 }
             })
             .catch(console.error);
     } else if (gyroscopeAvailable) {
-        window.addEventListener('deviceorientation', handleOrientation, true);
+        enableGyroscope();
     } else {
         console.log('Gyroscope not available');
+    }
+}
+
+function enableGyroscope() {
+    window.addEventListener('deviceorientation', handleOrientation, true);
+    const button = document.querySelector('button');
+    if (button) {
+        button.textContent = 'Gyroscope Enabled';
+        button.style.backgroundColor = '#888';
+        button.disabled = true;
     }
 }
 
