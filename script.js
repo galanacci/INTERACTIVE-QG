@@ -1,15 +1,18 @@
 let scene, camera, renderer, light;
 const modelInstances = [];
-let objectSize = 1.5; // Adjust this based on your model's actual size
-let spacing = 1.5; // Space between objects, adjust as needed
-let frustumSize = 30; // Reduced from 50 to zoom in
-let cameraZPosition = 5; // Reduced from 10 to move camera closer
+let objectSize = 1.5;
+let spacing = 1.5;
+let frustumSize = 30;
+let cameraZPosition = 5;
+
+let isMobile = false;
+let gyroscopeAvailable = false;
+let virtualCursor = { x: 0, y: 0 };
 
 function init() {
     console.log('Initializing scene...');
     scene = new THREE.Scene();
     
-    // Set up orthographic camera
     const aspectRatio = window.innerWidth / window.innerHeight;
     camera = new THREE.OrthographicCamera(
         frustumSize * aspectRatio / -2,
@@ -34,11 +37,81 @@ function init() {
 
     loadModel();
 
-    window.addEventListener('mousemove', onMouseMove, false);
+    detectMobileAndGyroscope();
+
+    if (isMobile && gyroscopeAvailable) {
+        window.addEventListener('deviceorientation', handleOrientation, true);
+    } else {
+        window.addEventListener('mousemove', onMouseMove, false);
+    }
     window.addEventListener('resize', onWindowResize, false);
 
     animate();
     console.log('Scene initialization complete');
+}
+
+function detectMobileAndGyroscope() {
+    isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+        if (window.DeviceOrientationEvent && typeof window.DeviceOrientationEvent.requestPermission === 'function') {
+            window.DeviceOrientationEvent.requestPermission()
+                .then(permissionState => {
+                    if (permissionState === 'granted') {
+                        gyroscopeAvailable = true;
+                    }
+                })
+                .catch(console.error);
+        } else {
+            gyroscopeAvailable = true;
+        }
+    }
+}
+
+function handleOrientation(event) {
+    const { beta, gamma } = event;
+    if (beta === null || gamma === null) return;
+
+    // Map gyroscope data to screen coordinates
+    virtualCursor.x = (gamma / 90) * window.innerWidth / 2 + window.innerWidth / 2;
+    virtualCursor.y = (beta / 180) * window.innerHeight / 2 + window.innerHeight / 2;
+
+    updateModelTilt(virtualCursor.x, virtualCursor.y);
+}
+
+function onMouseMove(event) {
+    updateModelTilt(event.clientX, event.clientY);
+}
+
+function updateModelTilt(cursorX, cursorY) {
+    const mouse = new THREE.Vector2(
+        (cursorX / window.innerWidth) * 2 - 1,
+        -(cursorY / window.innerHeight) * 2 + 1
+    );
+
+    const aspectRatio = window.innerWidth / window.innerHeight;
+    const mouseX = (mouse.x * frustumSize * aspectRatio) / 2;
+    const mouseY = (mouse.y * frustumSize) / 2;
+
+    const influenceRadius = 10;
+    const maxTiltAngle = 1;
+
+    modelInstances.forEach(instance => {
+        const dx = mouseX - instance.position.x;
+        const dy = mouseY - instance.position.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < influenceRadius) {
+            const tiltFactor = 1 - (distance / influenceRadius);
+            const tiltX = dy * tiltFactor * maxTiltAngle;
+            const tiltY = -dx * tiltFactor * maxTiltAngle;
+            
+            instance.rotation.x += (tiltX - instance.rotation.x) * 0.1;
+            instance.rotation.y += (tiltY - instance.rotation.y) * 0.1;
+        } else {
+            instance.rotation.x += (0 - instance.rotation.x) * 0.1;
+            instance.rotation.y += (0 - instance.rotation.y) * 0.1;
+        }
+    });
 }
 
 function loadModel() {
