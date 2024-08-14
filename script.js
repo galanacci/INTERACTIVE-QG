@@ -2,6 +2,8 @@ let scene, camera, renderer, light;
 const modelInstances = [];
 let objectSize = 1.5; // Adjust this based on your model's actual size
 let spacing = 1.5; // Space between objects, adjust as needed
+let frustumSize = 30; // Reduced from 50 to zoom in
+let cameraZPosition = 5; // Reduced from 10 to move camera closer
 
 function init() {
     console.log('Initializing scene...');
@@ -9,7 +11,6 @@ function init() {
     
     // Set up orthographic camera
     const aspectRatio = window.innerWidth / window.innerHeight;
-    const frustumSize = 50; // Adjusted to match previous view
     camera = new THREE.OrthographicCamera(
         frustumSize * aspectRatio / -2,
         frustumSize * aspectRatio / 2,
@@ -18,7 +19,7 @@ function init() {
         0.1,
         1000
     );
-    camera.position.z = 10;
+    camera.position.z = cameraZPosition;
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -69,7 +70,6 @@ function populateScene(model) {
     modelInstances.length = 0;
 
     const aspectRatio = window.innerWidth / window.innerHeight;
-    const frustumSize = 50;
     const width = frustumSize * aspectRatio;
     const height = frustumSize;
 
@@ -97,7 +97,6 @@ function onMouseMove(event) {
         -(event.clientY / window.innerHeight) * 2 + 1
     );
 
-    const frustumSize = 50;
     const aspectRatio = window.innerWidth / window.innerHeight;
     const mouseX = (mouse.x * frustumSize * aspectRatio) / 2;
     const mouseY = (mouse.y * frustumSize) / 2;
@@ -127,7 +126,6 @@ function onMouseMove(event) {
 
 function onWindowResize() {
     const aspectRatio = window.innerWidth / window.innerHeight;
-    const frustumSize = 50;
     camera.left = frustumSize * aspectRatio / -2;
     camera.right = frustumSize * aspectRatio / 2;
     camera.top = frustumSize / 2;
