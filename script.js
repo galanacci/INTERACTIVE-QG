@@ -53,17 +53,54 @@ function init() {
 function detectMobileAndGyroscope() {
     isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     if (isMobile) {
-        if (window.DeviceOrientationEvent && typeof window.DeviceOrientationEvent.requestPermission === 'function') {
-            window.DeviceOrientationEvent.requestPermission()
-                .then(permissionState => {
-                    if (permissionState === 'granted') {
-                        gyroscopeAvailable = true;
-                    }
-                })
-                .catch(console.error);
-        } else {
-            gyroscopeAvailable = true;
-        }
+        gyroscopeAvailable = 'DeviceOrientationEvent' in window;
+    }
+}
+
+function createPermissionPopup() {
+    const popup = document.createElement('div');
+    popup.style.position = 'fixed';
+    popup.style.top = '50%';
+    popup.style.left = '50%';
+    popup.style.transform = 'translate(-50%, -50%)';
+    popup.style.background = 'white';
+    popup.style.padding = '20px';
+    popup.style.borderRadius = '10px';
+    popup.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+    popup.style.zIndex = '1000';
+    popup.innerHTML = `
+        <h2>Enable Gyroscope</h2>
+        <p>This experience works best with gyroscope control. Would you like to enable it?</p>
+        <button id="enableGyro">Enable Gyroscope</button>
+        <button id="noGyro">No, thanks</button>
+    `;
+    document.body.appendChild(popup);
+
+    document.getElementById('enableGyro').addEventListener('click', () => {
+        requestGyroscopePermission();
+        document.body.removeChild(popup);
+    });
+
+    document.getElementById('noGyro').addEventListener('click', () => {
+        document.body.removeChild(popup);
+    });
+}
+
+function requestGyroscopePermission() {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+            .then(permissionState => {
+                if (permissionState === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation, true);
+                } else {
+                    console.log('Gyroscope permission denied');
+                }
+            })
+            .catch(console.error);
+    } else if (gyroscopeAvailable) {
+        window.addEventListener('deviceorientation', handleOrientation, true);
+    } else {
+        console.log('Gyroscope not available');
     }
 }
 
